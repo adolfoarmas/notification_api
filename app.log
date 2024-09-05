@@ -34,3 +34,5 @@
 2024-09-05 04:47:43 - src.notifications.service - INFO - SENT: Email notification: {'user_id': 8, 'user_name': 'Grace', 'contact_attr': 'email', 'contact_attr_value': 'grace@example.com', 'notification_message': 'Check the films we have for you!'}
 2024-09-05 04:47:43 - src.notifications.service - ERROR - FAIL: Push notification: email = 'None' for user 2
 2024-09-05 04:47:43 - src.database - INFO - Database session closed.
+2024-09-05 05:15:14 - src.main - INFO - Starting service...
+2024-09-05 05:15:25 - src.database - INFO - Database session closed.

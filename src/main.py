@@ -31,8 +31,6 @@ app.include_router(categories_router, prefix=api_prefix)
 app.include_router(channels_router, prefix=api_prefix)
 app.include_router(notification_router, prefix=api_prefix)
 
-
-
 @app.on_event("startup")
 async def on_startup():
     seed = os.getenv("SEED", False)
