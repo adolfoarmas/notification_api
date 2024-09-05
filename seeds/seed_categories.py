@@ -1,10 +1,11 @@
-# src/seeds/seed_categories.py
 
 from sqlalchemy.orm import Session
 from src.database import SessionLocal
 from src.categories.models import Category
 
-def seed_categories(session: Session):
+session = SessionLocal()
+
+def seed_categories():
     categories = [
         {"name": "Sports"},
         {"name": "Finance"},
@@ -18,9 +19,6 @@ def seed_categories(session: Session):
     session.commit()
 
 if __name__ == "__main__":
-    session = SessionLocal()
-    try:
-        seed_categories(session)
-        print("Categories seeded successfully.")
-    finally:
-        session.close()
+    seed_categories()
+    print("Categories seeded successfully.")
+

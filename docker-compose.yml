@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13
+    container_name: notifications_db
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: challenge
+      POSTGRES_PASSWORD: rNmRZ6DJwvxqdQP2h7yk8z
+    ports:
+      - "5433:5432" 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+
+  web:
+    build: .
+    container_name: notifications_api
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://challenge:rNmRZ6DJwvxqdQP2h7yk8z@db/notifications
+      #- SEED=True
+    volumes:
+      - .:/app
+    networks:
+      - app_network
+
+networks:
+  app_network:
+
+volumes:
+  postgres_data:

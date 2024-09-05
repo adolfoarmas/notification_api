@@ -1,10 +1,10 @@
-# src/seeds/seed_channels.py
-
 from sqlalchemy.orm import Session
 from src.database import SessionLocal
 from src.channels.models import Channel
 
-def seed_channels(session: Session):
+session = SessionLocal()
+
+def seed_channels():
     channels = [
         {"type": "SMS"},
         {"type": "Email"},
@@ -18,9 +18,6 @@ def seed_channels(session: Session):
     session.commit()
 
 if __name__ == "__main__":
-    session = SessionLocal()
-    try:
-        seed_channels(session)
-        print("Channels seeded successfully.")
-    finally:
-        session.close()
+    seed_channels()
+    print("Channels seeded successfully.")
+

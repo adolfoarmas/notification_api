@@ -7,6 +7,8 @@ from src.channels.models import UserChannel
 import asyncio
 import logging
 
+logger = logging.getLogger(__name__)
+
 class NotificationStrategy(ABC):
     message_dict = {}
     user: User = None
@@ -62,13 +64,13 @@ class SMSNotification(NotificationStrategy):
             await self.validate_contact_attribute()
             await self.send_notification()
             message_dict = await self.get_message_dict()
-            logging.info(f"SENT: SMS notification: {message_dict}")
+            logger.info(f"SENT: SMS notification: {message_dict}")
             return await self.get_status_object("SMS", "ok") 
 
         except ValueError as e:
-            logging.error({e})
+            logger.error(f"FAIL: SMS notification: {e}")
         except Exception as e:
-            logging.error(f"An error has ocurred when trying to send the SMS notification to user {self.user.id}")
+            logger.error(f"An error has ocurred when trying to send the SMS notification to user {self.user.id}")
         
         return await self.get_status_object("SMS", "failed")
 
@@ -88,13 +90,13 @@ class EmailNotification(NotificationStrategy):
             await self.validate_contact_attribute()
             await self.send_notification()
             message_dict = await self.get_message_dict()
-            logging.info(f"SENT: Email notification: {message_dict}")
+            logger.info(f"SENT: Email notification: {message_dict}")
 
             return await self.get_status_object("Email", "ok") 
         except ValueError as e:
-            logging.error({e})
+            logger.error(f"FAIL: Email notification: {e}")
         except Exception as e:
-            logging.error(f"An error has ocurred when trying to send the Email notification to user {self.user.id}")
+            logger.error(f"An error has ocurred when trying to send the Email notification to user {self.user.id}")
         
         return await self.get_status_object("Email", "failed")  
     
@@ -113,12 +115,14 @@ class PushNotification(NotificationStrategy):
             await self.validate_contact_attribute()
             await self.send_notification()
             message_dict = await self.get_message_dict()
-            logging.info(f"SENT: Push notification: {message_dict}")
+            logger.info(f"SENT: Push notification: {message_dict}")
 
             return await self.get_status_object("Push", "ok") 
         
+        except ValueError as e:
+            logger.error(f"FAIL: Push notification: {e}")
         except Exception as e:
-            logging.error(f"An error has ocurred when trying to send the Push notification to user {self.user.id}")
+            logger.error(f"An error has ocurred when trying to send the Email notification to user {self.user.id}")
         
         return await self.get_status_object("Push", "failed") 
     

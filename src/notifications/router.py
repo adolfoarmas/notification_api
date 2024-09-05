@@ -7,8 +7,11 @@ from src.database import get_db
 from typing import List
 import logging
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.post("/send/", response_model=List[NotificationResponse])
 async def send_notification(notification: NotificationBase, db: Session = Depends(get_db)):
+    logger.info(f"Notification request for message '{notification.message}' received...")
     return await service_send_notification(notification, db)

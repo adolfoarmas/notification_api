@@ -4,7 +4,6 @@ from sqlalchemy.orm import sessionmaker
 import os
 import logging
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv('DATABASE_URL')

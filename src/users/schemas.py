@@ -1,12 +1,12 @@
 from pydantic import BaseModel, validator, root_validator, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Union
 from src.categories.models import UserCategory
 from src.channels.models import UserChannel
 
 class UserBase(BaseModel):
-    name: str | None
-    email: str | None
-    phone: str | None
+    name: Union[str, None]
+    email: Union[str, None]
+    phone: Union[str, None]
 
 class UserCreate(UserBase):
     email: Optional[EmailStr]
