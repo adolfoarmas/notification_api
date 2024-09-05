@@ -2,6 +2,8 @@ from typing import Union
 from fastapi import FastAPI
 from src.users.router import router as users_router
 from src.notifications.router import router as notification_router
+from src.categories.router import router as categories_router
+from src.channels.router import router as channels_router
 import os
 import logging
 
@@ -18,4 +20,6 @@ logging.basicConfig(
 app = FastAPI()
 api_prefix = '/api/notifications'
 app.include_router(users_router, prefix=api_prefix)
+app.include_router(categories_router, prefix=api_prefix)
+app.include_router(channels_router, prefix=api_prefix)
 app.include_router(notification_router, prefix=api_prefix)

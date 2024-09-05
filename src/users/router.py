@@ -1,91 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session, selectinload
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from .schemas import UserCreate, User as UserSchema
-from .models import User
-from src.notifications.models import UserChannel, UserTopic
-from src.database import get_db
-from .crud import create_user
+from sqlalchemy.orm import Session
 from typing import List
-import logging
+from .schemas import UserCreate, User as UserSchema
+from .crud import create_user as crud_create_user, read_users as crud_read_users, read_user as crud_read_user, update_user as crud_update_user, delete_user as crud_delete_user
+from src.database import get_db
 
 router = APIRouter()
 
 @router.post("/users/", response_model=UserSchema)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    logging.info(f"creating user {user.name}")
-    try:
-        with db.begin():
-            db_user = User(name=user.name, email=user.email, phone=user.phone)
-            db.add(db_user)
-            db.flush()
-
-            # Handle user subscriptions to topics
-            if user.subscribed_topics:
-                for topic_id in user.subscribed_topics:
-                    db.add(UserTopic(user_id=db_user.id, topic_id=topic_id))
-
-            # Handle user subscriptions to channels
-            if user.subscribed_channels:
-                for channel_id in user.subscribed_channels:
-                    db.add(UserChannel(user_id=db_user.id, channel_id=channel_id))
-
-            db.commit()
-
-            return db_user
-    except IntegrityError as e:
-            logging.error(f"IntegrityError: {e}")
-            raise HTTPException(status_code=400, detail="Integrity error occurred. Check your data.")
-    except SQLAlchemyError as e:
-        logging.error(f"SQLAlchemyError: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while processing your request.")
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+    return crud_create_user(user, db)
 
 @router.get("/users/", response_model=List[UserSchema])
 def read_users(db: Session = Depends(get_db)):
-    return db.query(User).all()
+    return crud_read_users(db)
 
 @router.get("/users/{user_id}", response_model=UserSchema)
 def read_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+    user = crud_read_user(user_id, db)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 @router.put("/users/{user_id}", response_model=UserSchema)
 def update_user(user_id: int, user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if db_user is None:
+    updated_user = crud_update_user(user_id, user, db)
+    if updated_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    db_user.name = user.name
-    db_user.email = user.email
-    db_user.phone = user.phone
+    return updated_user
 
-    # Update user subscriptions to topics
-    if user.subscribed:
-        db.query(UserTopic).filter(UserTopic.user_id == user_id).delete()
-        for topic_id in user.subscribed:
-            db.add(UserTopic(user_id=user_id, topic_id=topic_id))
-
-    # Update user subscriptions to channels
-    if user.channel:
-        db.query(UserChannel).filter(UserChannel.user_id == user_id).delete()
-        for channel_id in user.channel:
-            db.add(UserChannel(user_id=user_id, channel_id=channel_id))
-
-    db.commit()
-    return db_user
-
-@router.delete("/users/{user_id}", response_model=UserSchema)
+@router.delete("/users/{user_id}", status_code=204)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if db_user is None:
+    deleted_user = crud_delete_user(user_id, db)
+    if deleted_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Remove subscriptions
-    db.query(UserTopic).filter(UserTopic.user_id == user_id).delete()
-    db.query(UserChannel).filter(UserChannel.user_id == user_id).delete()
-
-    db.delete(db_user)
-    db.commit()
-    return db_user
+    return deleted_user

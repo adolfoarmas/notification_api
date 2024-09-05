@@ -1,7 +1,7 @@
 from src.database import DATABASE_URL, Base
 from logging.config import fileConfig
-
-from src.notifications.models import Channel, Topic, UserChannel, UserTopic
+from src.categories.models import Category, UserCategory
+from src.channels.models import Channel, UserChannel
 from src.users.models import User
 
 from sqlalchemy import engine_from_config
