@@ -2,8 +2,11 @@ from abc import ABC, abstractmethod
 from fastapi import HTTPException
 from typing import List, Tuple, Any, Generator
 from src.users.models import User
+from src.categories.schemas import UserCategory as UserCategorySchema
 from src.categories.models import UserCategory
 from src.channels.models import UserChannel
+from src.celery import celery_app
+from src.tasks import send_sms_task, send_email_task, send_push_task
 import asyncio
 import logging
 
@@ -23,7 +26,7 @@ class NotificationStrategy(ABC):
         pass
     
     @abstractmethod
-    async def send_notification(self) -> bool:
+    def send_notification_to_channel_service(self) -> bool:
         pass
 
     async def set_message_dict(self) -> None:
@@ -46,7 +49,7 @@ class NotificationStrategy(ABC):
     
     async def handle_notification_list(self, users_notification_list: list) -> List[dict]:
         tasks = [self.process_notification(user) for _, user in users_notification_list]
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
     async def validate_contact_attribute(self) -> None:
         if self.contact_attr_value:
@@ -54,6 +57,10 @@ class NotificationStrategy(ABC):
         raise ValueError(f"{self.contact_attribute} = '{self.contact_attr_value}' for user {self.user.id}")
 
 class SMSNotification(NotificationStrategy):
+    
+    def send_notification_to_channel_service(self) -> bool:
+        return send_sms_task.delay(self.message_dict)
+
     async def process_notification(self, user: User):
         self.user = user
         self.contact_attr_value = self.user.phone
@@ -62,25 +69,23 @@ class SMSNotification(NotificationStrategy):
         try:
             await self.set_message_dict()
             await self.validate_contact_attribute()
-            await self.send_notification()
             message_dict = await self.get_message_dict()
-            logger.info(f"SENT: SMS notification: {message_dict}")
-            return await self.get_status_object("SMS", "ok") 
+            success = self.send_notification_to_channel_service()
+            logger.info(f"SENT: Email notification: {message_dict}")
+            return await self.get_status_object("Email", "ok") if success else await self.get_status_object("Email", "failed")
 
         except ValueError as e:
             logger.error(f"FAIL: SMS notification: {e}")
         except Exception as e:
             logger.error(f"An error has ocurred when trying to send the SMS notification to user {self.user.id}")
         
-        return await self.get_status_object("SMS", "failed")
-
-    async def send_notification(self) -> bool:
-        await super().send_notification()
-        #service channel connection logic here
-        return True
-        
+        return await self.get_status_object("SMS", "failed")        
         
 class EmailNotification(NotificationStrategy):
+
+    def send_notification_to_channel_service(self) -> bool:
+        return send_email_task.delay(self.message_dict)
+    
     async def process_notification(self, user: User):
         self.user = user
         self.contact_attribute = 'email'
@@ -88,11 +93,10 @@ class EmailNotification(NotificationStrategy):
         try:
             await self.set_message_dict()
             await self.validate_contact_attribute()
-            await self.send_notification()
             message_dict = await self.get_message_dict()
-            logger.info(f"SENT: Email notification: {message_dict}")
-
-            return await self.get_status_object("Email", "ok") 
+            success = self.send_notification_to_channel_service()
+            logger.info(f"Email: Push notification: {message_dict}")
+            return await self.get_status_object("Email", "ok") if success else await self.get_status_object("Email", "failed")
         except ValueError as e:
             logger.error(f"FAIL: Email notification: {e}")
         except Exception as e:
@@ -100,12 +104,13 @@ class EmailNotification(NotificationStrategy):
         
         return await self.get_status_object("Email", "failed")  
     
-    async def send_notification(self) -> bool:
-        await super().send_notification()
-        #service channel connection logic here
-        return True
+    
 
 class PushNotification(NotificationStrategy):
+
+    def send_notification_to_channel_service(self) -> bool:
+        return send_push_task.delay(self.message_dict)
+
     async def process_notification(self, user: User):
         self.user = user
         self.contact_attribute = 'email'
@@ -113,23 +118,20 @@ class PushNotification(NotificationStrategy):
         try:
             await self.set_message_dict()
             await self.validate_contact_attribute()
-            await self.send_notification()
             message_dict = await self.get_message_dict()
+            success = self.send_notification_to_channel_service()
             logger.info(f"SENT: Push notification: {message_dict}")
-
-            return await self.get_status_object("Push", "ok") 
+            return await self.get_status_object("Push", "ok") if success else await self.get_status_object("Push", "failed")
         
         except ValueError as e:
             logger.error(f"FAIL: Push notification: {e}")
         except Exception as e:
+            print("Error: ", e)
             logger.error(f"An error has ocurred when trying to send the Email notification to user {self.user.id}")
         
         return await self.get_status_object("Push", "failed") 
     
-    async def send_notification(self) -> bool:
-        await super().send_notification()
-        #service channel connection logic here
-        return True
+    
     
 async def select_notification_strategy(channel_id, message) -> NotificationStrategy:
     if channel_id == 1:

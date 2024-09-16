@@ -16,6 +16,10 @@ class UserCategoryBase(BaseModel):
     category_type: str
     category_id: int
 
+    class Config:
+        orm_mode = True
+        from_attributes = True
+
 class UserCategory(UserCategoryBase):
     user_id: int
 
